@@ -237,6 +237,44 @@
       }
     });
 
+    // Smooth scroll helpers
+    function smoothScrollToEl(target){
+      if (!target) return;
+      try { target.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+      catch { target.scrollIntoView(); }
+    }
+    function findApplyButton(){
+      let btn = $all('button, a').find(b => (b.textContent||'').trim().toLowerCase() === 'apply for membership');
+      if (btn) return btn;
+      const sec = document.getElementById('membership');
+      return sec || null;
+    }
+
+    // Map these triggers to scroll to the Apply for Membership button
+    ['join now','join the consortium today','become a member'].forEach(label => {
+      $all('button, a').forEach(el => {
+        const txt = (el.textContent||'').trim().toLowerCase();
+        if (txt === label) {
+          el.addEventListener('click', (e)=>{
+            e.preventDefault();
+            smoothScrollToEl(findApplyButton());
+          });
+        }
+      });
+    });
+
+    // Learn More: scroll down to the mission section
+    $all('button, a').forEach(el => {
+      const txt = (el.textContent||'').trim().toLowerCase();
+      if (txt === 'learn more') {
+        el.addEventListener('click', (e)=>{
+          e.preventDefault();
+          const mission = document.getElementById('mission');
+          if (mission) smoothScrollToEl(mission);
+        });
+      }
+    });
+
     // Close on ESC & click outside
     document.addEventListener('keydown', (e)=>{ if (e.key === 'Escape') { hide(contact.overlay); hide(member.overlay); } });
     ;[contact.overlay, member.overlay].forEach(mod => mod.addEventListener('click', (e)=>{ if (e.target === mod) { hide(mod); } }));
