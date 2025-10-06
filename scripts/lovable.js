@@ -24,6 +24,77 @@
   function eqText(el, txt){ return (el?.textContent||'').trim().toLowerCase() === String(txt).trim().toLowerCase(); }
   function hasText(el, txt){ return (el?.textContent||'').toLowerCase().includes(String(txt).toLowerCase()); }
   function injectCSS(css){ const s = make('style', { id: 'adpc-custom-injected' }); s.textContent = css; document.head.appendChild(s); }
+  // Compute project base path (e.g., /ADPC) for GitHub Pages project sites
+  function projectBase(){
+    // pathname like /ADPC/..., we want "/ADPC"
+    const parts = (location.pathname || '/').split('/').filter(Boolean);
+    // If hosted at project path, first segment is repo name
+    if (parts.length > 0) return '/' + parts[0];
+    return '';
+  }
+  function fixUrl(url){
+    if (!url) return url;
+    const base = projectBase();
+    const origin = location.origin;
+    // Normalize
+    try {
+      // Absolute URL case
+      if (url.startsWith(origin + '/assets/')) return origin + base + url.slice(origin.length);
+      if (url.startsWith(origin + '/images/')) return origin + base + url.slice(origin.length);
+    } catch {}
+    // Root-relative case
+    if (url.startsWith('/assets/')) return base + url;
+    if (url.startsWith('/images/')) return base + url;
+    return url;
+  }
+  function rewriteSrcAttributes(root=document){
+    const selectors = [
+      ['img','src'],
+      ['source','src'],
+      ['link[rel="preload" i][as="image" i], link[rel="image" i], link[rel="icon" i]','href'],
+      ['script','src'],
+    ];
+    selectors.forEach(([sel, attr])=>{
+      $all(sel, root).forEach(el=>{
+        const v = el.getAttribute(attr);
+        const nv = fixUrl(v);
+        if (nv && nv !== v) el.setAttribute(attr, nv);
+      });
+    });
+    // srcset
+    $all('img[srcset], source[srcset]', root).forEach(el=>{
+      const v = el.getAttribute('srcset')||'';
+      if (!v) return;
+      const parts = v.split(',').map(s=>s.trim()).filter(Boolean).map(item=>{
+        const [u, d] = item.split(/\s+/,2);
+        const fu = fixUrl(u);
+        return d ? `${fu} ${d}` : fu;
+      });
+      const nv = parts.join(', ');
+      if (nv !== v) el.setAttribute('srcset', nv);
+    });
+  }
+  function observeRewrites(){
+    const mo = new MutationObserver(muts=>{
+      muts.forEach(m=>{
+        if (m.type === 'attributes' && (m.attributeName === 'src' || m.attributeName === 'href' || m.attributeName === 'srcset')){
+          const el = m.target;
+          if (el && el.getAttribute){
+            const attr = m.attributeName;
+            const v = el.getAttribute(attr);
+            const nv = attr === 'srcset' ? (function(v){
+              const parts = (v||'').split(',').map(s=>s.trim()).filter(Boolean).map(item=>{ const [u,d] = item.split(/\s+/,2); const fu = fixUrl(u); return d ? `${fu} ${d}` : fu; });
+              return parts.join(', ');
+            })(v) : fixUrl(v);
+            if (nv && nv !== v) el.setAttribute(attr, nv);
+          }
+        } else if (m.type === 'childList') {
+          m.addedNodes.forEach(node=>{ if (node.nodeType === 1) rewriteSrcAttributes(node); });
+        }
+      });
+    });
+    mo.observe(document.documentElement, { subtree: true, childList: true, attributes: true, attributeFilter: ['src','href','srcset'] });
+  }
   // Simple math captcha
   function createCaptcha(labelEl, inputEl){
     const a = 1 + Math.floor(Math.random()*9);
@@ -104,6 +175,10 @@
   function hide(el){ el.style.display = 'none'; el.setAttribute('aria-hidden','true'); }
 
   ready(()=>{
+    // Rewrite any root-relative asset URLs to project-relative
+    rewriteSrcAttributes(document);
+    observeRewrites();
+
     // Inject minimal styles for modals
     injectCSS(`
       .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.6); display: none; align-items: center; justify-content: center; z-index: 10000; }
