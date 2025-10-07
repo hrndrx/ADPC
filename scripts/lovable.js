@@ -196,46 +196,58 @@
       @media (min-width: 640px) { .modal .row { grid-template-columns: 1fr 1fr; } }
     `);
 
-    // Remove email address texts broadly (contact card + footer) and Follow Us columns
-    // Contact: remove p with email
-    $all('h4').forEach(h=>{
-      const label = (h.textContent||'').trim();
-      if (label === 'Email Us') {
-        const card = h.closest('div');
-        if (card) { const emailP = card.querySelector('p'); if (emailP && /@/.test(emailP.textContent||'')) emailP.remove(); }
-      }
-      if (label === 'Follow Us') {
-        const col = h.closest('div');
-        if (col) col.remove();
-      }
-    });
-    // Footer contact email
-    $all('span, p, a, li').forEach(el => { if (/@/.test(el.textContent||'')) el.remove(); });
-
-    // Remove Partner/Volunteer buttons
-    $all('button').forEach(btn => {
-      const t = (btn.textContent||'').trim().toLowerCase();
-      if (t === 'partner with us' || t === 'volunteer') btn.remove();
-    });
+    // UI sanitization that is resilient to SPA re-renders
+    function sanitizeUI(root=document){
+      // Remove email address texts broadly (contact card + footer)
+      $all('span, p, a, li', root).forEach(el => { if (/@/.test(el.textContent||'')) el.remove(); });
+      // Contact card: remove p under "Email Us"
+      $all('h4', root).forEach(h=>{
+        const label = (h.textContent||'').trim();
+        if (label === 'Email Us') {
+          const card = h.closest('div');
+          if (card) { const emailP = card.querySelector('p'); if (emailP && /@/.test(emailP.textContent||'')) emailP.remove(); }
+        }
+        if (label === 'Follow Us') {
+          const col = h.closest('div');
+          if (col) col.remove();
+        }
+      });
+      // Remove Partner/Volunteer buttons
+      $all('button', root).forEach(btn => {
+        const t = (btn.textContent||'').trim().toLowerCase();
+        if (t === 'partner with us' || t === 'volunteer') btn.remove();
+      });
+    }
+    sanitizeUI(document);
 
     // Build modals once
     const contact = buildContactModal();
     const member = buildMembershipModal();
 
-    // Hook Contact / Contact Us triggers
-    $all('button, a').forEach(el => {
-      const txt = (el.textContent||'').trim().toLowerCase();
-      if (txt === 'contact' || txt === 'contact us') {
-        el.addEventListener('click', (e)=>{ e.preventDefault(); contact.reset(); show(contact.overlay); });
-      }
-    });
+    // Hook Contact / Contact Us triggers (idempotent)
+    function wireContact(root=document){
+      $all('button, a', root).forEach(el => {
+        if (el.__adpcContactWired) return;
+        const txt = (el.textContent||'').trim().toLowerCase();
+        if (txt === 'contact' || txt === 'contact us') {
+          el.__adpcContactWired = true;
+          el.addEventListener('click', (e)=>{ e.preventDefault(); contact.reset(); show(contact.overlay); });
+        }
+      });
+    }
+    wireContact(document);
     // Hook Apply for Membership triggers
-    $all('button, a').forEach(el => {
-      const txt = (el.textContent||'').trim().toLowerCase();
-      if (txt === 'apply for membership') {
-        el.addEventListener('click', (e)=>{ e.preventDefault(); member.reset(); show(member.overlay); });
-      }
-    });
+    function wireMembership(root=document){
+      $all('button, a', root).forEach(el => {
+        if (el.__adpcMemberWired) return;
+        const txt = (el.textContent||'').trim().toLowerCase();
+        if (txt === 'apply for membership') {
+          el.__adpcMemberWired = true;
+          el.addEventListener('click', (e)=>{ e.preventDefault(); member.reset(); show(member.overlay); });
+        }
+      });
+    }
+    wireMembership(document);
 
     // Smooth scroll helpers
     function smoothScrollToEl(target){
@@ -251,32 +263,58 @@
     }
 
     // Map these triggers to scroll to the Apply for Membership button
-    ['join now','join the consortium today','become a member'].forEach(label => {
-      $all('button, a').forEach(el => {
+    function wireJoinScroll(root=document){
+      ['join now','join the consortium today','become a member'].forEach(label => {
+        $all('button, a', root).forEach(el => {
+          if (el.__adpcJoinWired) return;
+          const txt = (el.textContent||'').trim().toLowerCase();
+          if (txt === label) {
+            el.__adpcJoinWired = true;
+            el.addEventListener('click', (e)=>{
+              e.preventDefault();
+              smoothScrollToEl(findApplyButton());
+            });
+          }
+        });
+      });
+    }
+    wireJoinScroll(document);
+
+    // Learn More: scroll down to the mission section
+    function wireLearnMore(root=document){
+      $all('button, a', root).forEach(el => {
+        if (el.__adpcLearnWired) return;
         const txt = (el.textContent||'').trim().toLowerCase();
-        if (txt === label) {
+        if (txt === 'learn more') {
+          el.__adpcLearnWired = true;
           el.addEventListener('click', (e)=>{
             e.preventDefault();
-            smoothScrollToEl(findApplyButton());
+            const mission = document.getElementById('mission');
+            if (mission) smoothScrollToEl(mission);
           });
         }
       });
-    });
-
-    // Learn More: scroll down to the mission section
-    $all('button, a').forEach(el => {
-      const txt = (el.textContent||'').trim().toLowerCase();
-      if (txt === 'learn more') {
-        el.addEventListener('click', (e)=>{
-          e.preventDefault();
-          const mission = document.getElementById('mission');
-          if (mission) smoothScrollToEl(mission);
-        });
-      }
-    });
+    }
+    wireLearnMore(document);
 
     // Close on ESC & click outside
     document.addEventListener('keydown', (e)=>{ if (e.key === 'Escape') { hide(contact.overlay); hide(member.overlay); } });
     ;[contact.overlay, member.overlay].forEach(mod => mod.addEventListener('click', (e)=>{ if (e.target === mod) { hide(mod); } }));
+
+    // Observe SPA updates and re-apply wiring and sanitization
+    const uiMO = new MutationObserver(muts => {
+      let touched = false;
+      muts.forEach(m => {
+        if (m.type === 'childList' && (m.addedNodes && m.addedNodes.length)) touched = true;
+      });
+      if (touched) {
+        sanitizeUI(document);
+        wireContact(document);
+        wireMembership(document);
+        wireJoinScroll(document);
+        wireLearnMore(document);
+      }
+    });
+    uiMO.observe(document.getElementById('root') || document.body, { childList: true, subtree: true });
   });
 })();
