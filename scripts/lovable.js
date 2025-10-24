@@ -117,17 +117,18 @@
     } catch {}
   }
 
-  // Inject lightweight legal links into the page footer area
-  function ensureLegalLinks(){
-    const containerId = 'adpc-legal-links';
-    if (document.getElementById(containerId)) return;
+  // Disabled: avoid injecting duplicate legal links (handled in page footers)
+  function ensureLegalLinks(){}
+
+  // Ensure footer policy links point to the correct pages
+  function fixFooterPolicyLinks(root=document){
     const base = projectBase();
-    const wrap = make('nav', { id: containerId, 'aria-label': 'Legal', style: 'display:block;text-align:center;margin:40px 0 12px;font-size:14px;color:#64748b;' });
-    function link(href, text){ return make('a', { href: base + href, style: 'margin:0 10px;color:#0f172a;text-decoration:underline;', text }); }
-    wrap.append(link('/privacy.html','Privacy Policy'));
-    wrap.append(link('/terms.html','Terms of Service'));
-    wrap.append(link('/cookies.html','Cookie Policy'));
-    (document.getElementById('root') || document.body).appendChild(wrap);
+    $all('footer a', root).forEach(a=>{
+      const t = (a.textContent||'').trim().toLowerCase();
+      if (t === 'privacy policy') a.setAttribute('href', base + '/privacy.html');
+      else if (t === 'terms of service') a.setAttribute('href', base + '/terms.html');
+      else if (t === 'cookie policy') a.setAttribute('href', base + '/cookies.html');
+    });
   }
   // Simple math captcha
   function createCaptcha(labelEl, inputEl){
@@ -365,8 +366,9 @@
       });
     }
     wireLearnMore(document);
-    // Ensure legal links exist
+    // Ensure footer links point to policy pages
     ensureLegalLinks();
+    fixFooterPolicyLinks();
 
     // Close on ESC & click outside
     document.addEventListener('keydown', (e)=>{ if (e.key === 'Escape') { hide(contact.overlay); hide(member.overlay); } });
@@ -385,10 +387,12 @@
         wireJoinScroll(document);
         wireLearnMore(document);
         ensureLegalLinks();
+        fixFooterPolicyLinks();
       }
     });
     uiMO.observe(document.getElementById('root') || document.body, { childList: true, subtree: true });
-    // Add legal links once content exists
+    // Ensure footer links once content exists
     ensureLegalLinks();
+    fixFooterPolicyLinks();
   });
 })();
