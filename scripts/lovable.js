@@ -95,6 +95,40 @@
     });
     mo.observe(document.documentElement, { subtree: true, childList: true, attributes: true, attributeFilter: ['src','href','srcset'] });
   }
+  // Ensure a favicon is present and points to the ADPC logo
+  function ensureFavicon(){
+    try {
+      const href = fixUrl('/assets/adpc-logo-CAdYi-Xb.jpg');
+      let link = document.querySelector('link[rel~="icon"]');
+      if (!link) {
+        link = make('link', { rel: 'icon', type: 'image/jpeg', href });
+        document.head.appendChild(link);
+      } else {
+        link.setAttribute('href', href);
+        link.setAttribute('type', 'image/jpeg');
+      }
+      let apple = document.querySelector('link[rel="apple-touch-icon"]');
+      if (!apple) {
+        apple = make('link', { rel: 'apple-touch-icon', href });
+        document.head.appendChild(apple);
+      } else {
+        apple.setAttribute('href', href);
+      }
+    } catch {}
+  }
+
+  // Inject lightweight legal links into the page footer area
+  function ensureLegalLinks(){
+    const containerId = 'adpc-legal-links';
+    if (document.getElementById(containerId)) return;
+    const base = projectBase();
+    const wrap = make('nav', { id: containerId, 'aria-label': 'Legal', style: 'display:block;text-align:center;margin:40px 0 12px;font-size:14px;color:#64748b;' });
+    function link(href, text){ return make('a', { href: base + href, style: 'margin:0 10px;color:#0f172a;text-decoration:underline;', text }); }
+    wrap.append(link('/privacy.html','Privacy Policy'));
+    wrap.append(link('/terms.html','Terms of Service'));
+    wrap.append(link('/cookies.html','Cookie Policy'));
+    (document.getElementById('root') || document.body).appendChild(wrap);
+  }
   // Simple math captcha
   function createCaptcha(labelEl, inputEl){
     const a = 1 + Math.floor(Math.random()*9);
@@ -109,20 +143,24 @@
     const modal = make('div', { class: 'modal', role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': 'contact-modal-title' });
     const header = make('header', {}, [ make('span', { id: 'contact-modal-title', text: 'Contact Us' }), make('button', { type: 'button', 'data-close-contact': '', 'aria-label': 'Close', text: '×' }) ]);
     const content = make('div', { class: 'content' });
+    const form = make('form', { id: 'contact-form', action: 'https://formspree.io/f/mqayrjqb', method: 'POST', 'accept-charset': 'UTF-8' });
     const row = make('div', { class: 'row' });
-    const name = make('div', {}, [ make('label', { for: 'contact-name', text: 'Full name' }), make('input', { id: 'contact-name', type: 'text', placeholder: 'Your name', required: '' }) ]);
-    const email = make('div', {}, [ make('label', { for: 'contact-email', text: 'Email' }), make('input', { id: 'contact-email', type: 'email', placeholder: 'you@example.com', required: '' }) ]);
-    const city = make('div', {}, [ make('label', { for: 'contact-city', text: 'City' }), make('input', { id: 'contact-city', type: 'text', placeholder: 'Your city', required: '' }) ]);
-    const cap = make('div', {}, [ make('label', { id: 'contact-captcha-label', for: 'contact-captcha', text: 'Captcha' }), make('input', { id: 'contact-captcha', type: 'text', inputmode: 'numeric', placeholder: 'Answer', required: '' }), make('div', { id: 'contact-captcha-error', class: 'error', text: 'Incorrect answer. Please try again.' }) ]);
+    const name = make('div', {}, [ make('label', { for: 'contact-name', text: 'Full name' }), make('input', { id: 'contact-name', name: 'contact_full_name', type: 'text', placeholder: 'Your name', required: '' }) ]);
+    const email = make('div', {}, [ make('label', { for: 'contact-email', text: 'Email' }), make('input', { id: 'contact-email', name: 'contact_email', type: 'email', placeholder: 'you@example.com', required: '' }) ]);
+    const city = make('div', {}, [ make('label', { for: 'contact-city', text: 'City' }), make('input', { id: 'contact-city', name: 'contact_city', type: 'text', placeholder: 'Your city', required: '' }) ]);
+    const cap = make('div', {}, [ make('label', { id: 'contact-captcha-label', for: 'contact-captcha', text: 'Captcha' }), make('input', { id: 'contact-captcha', name: 'contact_captcha', type: 'text', inputmode: 'numeric', placeholder: 'Answer', required: '' }), make('div', { id: 'contact-captcha-error', class: 'error', text: 'Incorrect answer. Please try again.' }) ]);
     row.append(name, email, city, cap);
     content.appendChild(row);
-    const actions = make('div', { class: 'actions' }, [ make('button', { type: 'button', class: 'btn secondary', 'data-close-contact': '', text: 'Cancel' }), make('button', { type: 'button', class: 'btn', id: 'contact-submit', text: 'Send' }) ]);
-    modal.append(header, content, actions);
+    const hidden = make('input', { type: 'hidden', name: 'form_name', value: 'contact' });
+    const actions = make('div', { class: 'actions' }, [ make('button', { type: 'button', class: 'btn secondary', 'data-close-contact': '', text: 'Cancel' }), make('button', { type: 'submit', class: 'btn', id: 'contact-submit', text: 'Send' }) ]);
+    form.append(content, hidden, actions);
+    modal.append(header, form);
     overlay.appendChild(modal);
     document.body.appendChild(overlay);
     let expected = createCaptcha($('#contact-captcha-label'), $('#contact-captcha'));
     $all('[data-close-contact]', overlay).forEach(el => el.addEventListener('click', () => hide(overlay)));
-    $('#contact-submit').addEventListener('click', () => {
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
       const nameVal = $('#contact-name').value.trim();
       const emailVal = $('#contact-email').value.trim();
       const cityVal = $('#contact-city').value.trim();
@@ -130,35 +168,50 @@
       const err = $('#contact-captcha-error'); err.style.display = 'none';
       if (!nameVal || !emailVal || !cityVal) { alert('Please fill out all fields.'); return; }
       if (Number(capVal) !== Number(expected)) { err.style.display = 'block'; expected = createCaptcha($('#contact-captcha-label'), $('#contact-captcha')); return; }
-      alert('Thanks! We\'ll be in touch.');
-      hide(overlay);
+      try {
+        const res = await fetch(form.getAttribute('action'), { method: 'POST', headers: { 'Accept': 'application/json' }, body: new FormData(form) });
+        if (res.ok) {
+          alert('Thanks! We\'ll be in touch.');
+          hide(overlay);
+          form.reset();
+          expected = createCaptcha($('#contact-captcha-label'), $('#contact-captcha'));
+        } else {
+          alert('There was a problem submitting the form. Please try again.');
+        }
+      } catch(e) {
+        alert('Network error. Please try again.');
+      }
     });
-    return { overlay, reset: () => { expected = createCaptcha($('#contact-captcha-label'), $('#contact-captcha')); } };
+    return { overlay, reset: () => { expected = createCaptcha($('#contact-captcha-label'), $('#contact-captcha')); form.reset(); } };
   }
   function buildMembershipModal(){
     const overlay = make('div', { class: 'modal-overlay', id: 'membership-modal', 'aria-hidden': 'true' });
     const modal = make('div', { class: 'modal', role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': 'membership-modal-title' });
     const header = make('header', {}, [ make('span', { id: 'membership-modal-title', text: 'Apply for Membership' }), make('button', { type: 'button', 'data-close-membership': '', 'aria-label': 'Close', text: '×' }) ]);
     const content = make('div', { class: 'content' });
+    const form = make('form', { id: 'membership-form', action: 'https://formspree.io/f/mqayrjqb', method: 'POST', 'accept-charset': 'UTF-8' });
     const row = make('div', { class: 'row' });
-    const name = make('div', {}, [ make('label', { for: 'member-name', text: 'Full name' }), make('input', { id: 'member-name', type: 'text', placeholder: 'Your name', required: '' }) ]);
-    const email = make('div', {}, [ make('label', { for: 'member-email', text: 'Email' }), make('input', { id: 'member-email', type: 'email', placeholder: 'you@example.com', required: '' }) ]);
-    const org = make('div', {}, [ make('label', { for: 'member-organization', text: 'Organization (optional)' }), make('input', { id: 'member-organization', type: 'text', placeholder: 'Organization' }) ]);
-    const role = make('div', {}, [ make('label', { for: 'member-role', text: 'Role' }), make('input', { id: 'member-role', type: 'text', placeholder: 'Your role' }) ]);
-    const country = make('div', {}, [ make('label', { for: 'member-country', text: 'Country' }), make('input', { id: 'member-country', type: 'text', placeholder: 'Country' }) ]);
-    const city = make('div', {}, [ make('label', { for: 'member-city', text: 'City' }), make('input', { id: 'member-city', type: 'text', placeholder: 'City' }) ]);
-    const type = make('div', {}, [ make('label', { for: 'member-type', text: 'Membership type' }), (function(){ const sel = make('select', { id: 'member-type' }); sel.append(make('option', { value: 'Individual', text: 'Individual' }), make('option', { value: 'Organization', text: 'Organization' })); return sel; })() ]);
-    const cap = make('div', {}, [ make('label', { id: 'member-captcha-label', for: 'member-captcha', text: 'Captcha' }), make('input', { id: 'member-captcha', type: 'text', inputmode: 'numeric', placeholder: 'Answer', required: '' }), make('div', { id: 'member-captcha-error', class: 'error', text: 'Incorrect answer. Please try again.' }) ]);
-    const termsWrap = make('div', { style: 'grid-column:1/-1;display:flex;gap:8px;align-items:center;margin-top:6px;' }, [ make('input', { id: 'member-terms', type: 'checkbox' }), make('label', { for: 'member-terms', style: 'font-size:14px;', text: 'I agree to be contacted about my application.' }) ]);
+    const name = make('div', {}, [ make('label', { for: 'member-name', text: 'Full name' }), make('input', { id: 'member-name', name: 'member_full_name', type: 'text', placeholder: 'Your name', required: '' }) ]);
+    const email = make('div', {}, [ make('label', { for: 'member-email', text: 'Email' }), make('input', { id: 'member-email', name: 'member_email', type: 'email', placeholder: 'you@example.com', required: '' }) ]);
+    const org = make('div', {}, [ make('label', { for: 'member-organization', text: 'Organization (optional)' }), make('input', { id: 'member-organization', name: 'member_organization', type: 'text', placeholder: 'Organization' }) ]);
+    const role = make('div', {}, [ make('label', { for: 'member-role', text: 'Role' }), make('input', { id: 'member-role', name: 'member_role', type: 'text', placeholder: 'Your role' }) ]);
+    const country = make('div', {}, [ make('label', { for: 'member-country', text: 'Country' }), make('input', { id: 'member-country', name: 'member_country', type: 'text', placeholder: 'Country' }) ]);
+    const city = make('div', {}, [ make('label', { for: 'member-city', text: 'City' }), make('input', { id: 'member-city', name: 'member_city', type: 'text', placeholder: 'City' }) ]);
+    const type = make('div', {}, [ make('label', { for: 'member-type', text: 'Membership type' }), (function(){ const sel = make('select', { id: 'member-type', name: 'member_type' }); sel.append(make('option', { value: 'Individual', text: 'Individual' }), make('option', { value: 'Organization', text: 'Organization' })); return sel; })() ]);
+    const cap = make('div', {}, [ make('label', { id: 'member-captcha-label', for: 'member-captcha', text: 'Captcha' }), make('input', { id: 'member-captcha', name: 'member_captcha', type: 'text', inputmode: 'numeric', placeholder: 'Answer', required: '' }), make('div', { id: 'member-captcha-error', class: 'error', text: 'Incorrect answer. Please try again.' }) ]);
+    const termsWrap = make('div', { style: 'grid-column:1/-1;display:flex;gap:8px;align-items:center;margin-top:6px;' }, [ make('input', { id: 'member-terms', name: 'member_terms', type: 'checkbox' }), make('label', { for: 'member-terms', style: 'font-size:14px;', text: 'I agree to be contacted about my application.' }) ]);
     row.append(name,email,org,role,country,city,type,cap,termsWrap);
     content.appendChild(row);
-    const actions = make('div', { class: 'actions' }, [ make('button', { type: 'button', class: 'btn secondary', 'data-close-membership': '', text: 'Cancel' }), make('button', { type: 'button', class: 'btn', id: 'membership-submit', text: 'Submit' }) ]);
-    modal.append(header, content, actions);
+    const hidden = make('input', { type: 'hidden', name: 'form_name', value: 'membership' });
+    const actions = make('div', { class: 'actions' }, [ make('button', { type: 'button', class: 'btn secondary', 'data-close-membership': '', text: 'Cancel' }), make('button', { type: 'submit', class: 'btn', id: 'membership-submit', text: 'Submit' }) ]);
+    form.append(content, hidden, actions);
+    modal.append(header, form);
     overlay.appendChild(modal);
     document.body.appendChild(overlay);
     let expected = createCaptcha($('#member-captcha-label'), $('#member-captcha'));
     $all('[data-close-membership]', overlay).forEach(el => el.addEventListener('click', () => hide(overlay)));
-    $('#membership-submit').addEventListener('click', () => {
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
       const nameVal = $('#member-name').value.trim();
       const emailVal = $('#member-email').value.trim();
       const terms = $('#member-terms').checked;
@@ -166,10 +219,21 @@
       const err = $('#member-captcha-error'); err.style.display = 'none';
       if (!nameVal || !emailVal || !terms) { alert('Please complete name, email, and agree to terms.'); return; }
       if (Number(capVal) !== Number(expected)) { err.style.display = 'block'; expected = createCaptcha($('#member-captcha-label'), $('#member-captcha')); return; }
-      alert('Membership application submitted. Thank you!');
-      hide(overlay);
+      try {
+        const res = await fetch(form.getAttribute('action'), { method: 'POST', headers: { 'Accept': 'application/json' }, body: new FormData(form) });
+        if (res.ok) {
+          alert('Membership application submitted. Thank you!');
+          hide(overlay);
+          form.reset();
+          expected = createCaptcha($('#member-captcha-label'), $('#member-captcha'));
+        } else {
+          alert('There was a problem submitting the form. Please try again.');
+        }
+      } catch(e) {
+        alert('Network error. Please try again.');
+      }
     });
-    return { overlay, reset: () => { expected = createCaptcha($('#member-captcha-label'), $('#member-captcha')); } };
+    return { overlay, reset: () => { expected = createCaptcha($('#member-captcha-label'), $('#member-captcha')); form.reset(); } };
   }
   function show(el){ el.style.display = 'flex'; el.setAttribute('aria-hidden','false'); }
   function hide(el){ el.style.display = 'none'; el.setAttribute('aria-hidden','true'); }
@@ -178,6 +242,8 @@
     // Rewrite any root-relative asset URLs to project-relative
     rewriteSrcAttributes(document);
     observeRewrites();
+    ensureFavicon();
+    ensureFavicon();
 
     // Inject minimal styles for modals
     injectCSS(`
@@ -194,6 +260,9 @@
       .btn.secondary { background: #fff; color: #0f172a; }
       .error { color: #b91c1c; font-size: 13px; margin-top: 6px; display: none; }
       @media (min-width: 640px) { .modal .row { grid-template-columns: 1fr 1fr; } }
+
+      /* Legal links */
+      #adpc-legal-links a:hover { text-decoration: none; }
     `);
 
     // UI sanitization that is resilient to SPA re-renders
@@ -296,6 +365,8 @@
       });
     }
     wireLearnMore(document);
+    // Ensure legal links exist
+    ensureLegalLinks();
 
     // Close on ESC & click outside
     document.addEventListener('keydown', (e)=>{ if (e.key === 'Escape') { hide(contact.overlay); hide(member.overlay); } });
@@ -313,8 +384,11 @@
         wireMembership(document);
         wireJoinScroll(document);
         wireLearnMore(document);
+        ensureLegalLinks();
       }
     });
     uiMO.observe(document.getElementById('root') || document.body, { childList: true, subtree: true });
+    // Add legal links once content exists
+    ensureLegalLinks();
   });
 })();
