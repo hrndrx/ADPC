@@ -57,6 +57,75 @@
     selectors.forEach(([sel, attr])=>{
       $all(sel, root).forEach(el=>{
         const v = el.getAttribute(attr);
+        const n's the complete `scripts/lovable.js` file. You can copy this and paste it directly on GitHub:
+
+**To update on GitHub:**
+1. Go to: https://github.com/hrndrx/ADPC
+2. Navigate to `scripts/lovable.js`
+3. Click the pencil icon (Edit this file)
+4. Select all and replace with the code below
+5. Add a commit message and commit
+
+```javascript
+// Enhancements injected for GitHub Pages build
+// - Remove public email and Follow Us sections
+// - Show Contact modal (name, email, city + captcha)
+// - Remove Partner/Volunteer buttons
+// - Show Membership application modal on "Apply for Membership"
+(function(){
+  const ready = (fn) => {
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', fn, { once: true });
+    } else {
+      fn();
+    }
+  };
+  function $(sel, root=document){ return root.querySelector(sel); }
+  function $all(sel, root=document){ return Array.from(root.querySelectorAll(sel)); }
+  function make(tag, attrs={}, children=[]) {
+    const el = document.createElement(tag);
+    Object.entries(attrs).forEach(([k,v])=>{
+      if (k === 'class') el.className = v; else if (k === 'text') el.textContent = v; else el.setAttribute(k, v);
+    });
+    children.forEach(c=> el.appendChild(c));
+    return el;
+  }
+  function eqText(el, txt){ return (el?.textContent||'').trim().toLowerCase() === String(txt).trim().toLowerCase(); }
+  function hasText(el, txt){ return (el?.textContent||'').toLowerCase().includes(String(txt).toLowerCase()); }
+  function injectCSS(css){ const s = make('style', { id: 'adpc-custom-injected' }); s.textContent = css; document.head.appendChild(s); }
+  // Compute project base path (e.g., /ADPC) for GitHub Pages project sites
+  function projectBase(){
+    // pathname like /ADPC/..., we want "/ADPC"
+    const parts = (location.pathname || '/').split('/').filter(Boolean);
+    // If hosted at project path, first segment is repo name
+    if (parts.length > 0) return '/' + parts[0];
+    return '';
+  }
+  function fixUrl(url){
+    if (!url) return url;
+    const base = projectBase();
+    const origin = location.origin;
+    // Normalize
+    try {
+      // Absolute URL case
+      if (url.startsWith(origin + '/assets/')) return origin + base + url.slice(origin.length);
+      if (url.startsWith(origin + '/images/')) return origin + base + url.slice(origin.length);
+    } catch {}
+    // Root-relative case
+    if (url.startsWith('/assets/')) return base + url;
+    if (url.startsWith('/images/')) return base + url;
+    return url;
+  }
+  function rewriteSrcAttributes(root=document){
+    const selectors = [
+      ['img','src'],
+      ['source','src'],
+      ['link[rel="preload" i][as="image" i], link[rel="image" i], link[rel="icon" i]','href'],
+      ['script','src'],
+    ];
+    selectors.forEach(([sel, attr])=>{
+      $all(sel, root).forEach(el=>{
+        const v = el.getAttribute(attr);
         const nv = fixUrl(v);
         if (nv && nv !== v) el.setAttribute(attr, nv);
       });
@@ -264,18 +333,69 @@
 
       /* Legal links */
       #adpc-legal-links a:hover { text-decoration: none; }
+
+      /* ADPC Logo Text - Make bigger and centered */
+      nav span.font-serif.text-4xl.font-bold {
+        font-size: 4rem !important;
+        text-align: center !important;
+      }
+
+      /* Hero section - Make "Protecting Your Data in Africa" one strong brown color */
+      h1.font-serif.font-bold.text-adpc-navy {
+        color: #5D4037 !important;
+      }
+      h1.font-serif.font-bold span.text-adpc-gold {
+        color: #5D4037 !important;
+      }
+
+      /* Contact email display */
+      .adpc-contact-email {
+        font-size: 16px;
+        color: #8B4513;
+        font-weight: 500;
+        margin-top: 8px;
+      }
+      .adpc-contact-email a {
+        color: #8B4513;
+        text-decoration: none;
+      }
+      .adpc-contact-email a:hover {
+        text-decoration: underline;
+      }
     `);
+
+    // Add email to contact section
+    function addContactEmail(root=document) {
+      $all('h4', root).forEach(h => {
+        const label = (h.textContent||'').trim();
+        if (label === 'Email Us') {
+          const card = h.closest('div');
+          if (card && !card.querySelector('.adpc-contact-email')) {
+            const emailDiv = make('p', { class: 'adpc-contact-email' }, [
+              make('a', { href: 'mailto:aldnse@gmail.com', text: 'aldnse@gmail.com' })
+            ]);
+            card.appendChild(emailDiv);
+          }
+        }
+      });
+    }
+    addContactEmail(document);
 
     // UI sanitization that is resilient to SPA re-renders
     function sanitizeUI(root=document){
-      // Remove email address texts broadly (contact card + footer)
-      $all('span, p, a, li', root).forEach(el => { if (/@/.test(el.textContent||'')) el.remove(); });
-      // Contact card: remove p under "Email Us"
+      // Remove email address texts broadly (contact card + footer) - but skip our added email
+      $all('span, p, a, li', root).forEach(el => { 
+        if (/@/.test(el.textContent||'') && !el.classList.contains('adpc-contact-email') && !el.closest('.adpc-contact-email')) el.remove(); 
+      });
+      // Contact card: remove p under "Email Us" - but skip our added email
       $all('h4', root).forEach(h=>{
         const label = (h.textContent||'').trim();
         if (label === 'Email Us') {
           const card = h.closest('div');
-          if (card) { const emailP = card.querySelector('p'); if (emailP && /@/.test(emailP.textContent||'')) emailP.remove(); }
+          if (card) { 
+            const emailP = card.querySelector('p:not(.adpc-contact-email)'); 
+            if (emailP && /@/.test(emailP.textContent||'')) emailP.remove(); 
+          }
         }
         if (label === 'Follow Us') {
           const col = h.closest('div');
@@ -382,6 +502,7 @@
       });
       if (touched) {
         sanitizeUI(document);
+        addContactEmail(document);
         wireContact(document);
         wireMembership(document);
         wireJoinScroll(document);
