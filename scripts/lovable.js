@@ -340,6 +340,31 @@
     
     // UI sanitization that is resilient to SPA re-renders
     function sanitizeUI(root=document){
+      // Remove Contact card heading and its section
+      $all('h4').forEach(h => {
+        const label = (h.textContent||'').trim();
+        if (label === 'Contact') {
+          const card = h.closest('div');
+          if (card) card.remove();
+        }
+      });
+      
+      // Remove sections with "Africa & Beyond" and "Privacy Community"
+      $all('h4, p, a, span, li').forEach(el => {
+        const text = (el.textContent||'').trim();
+        if (text === 'Africa & Beyond' || text === 'Privacy Community' || text === 'Join Our Community') {
+          let parent = el.parentElement;
+          if (parent) {
+            // Remove the entire card/section
+            while (parent && parent.tagName !== 'SECTION' && parent.tagName !== 'DIV' && parent.className && parent.className.includes('grid')) {
+              parent = parent.parentElement;
+            }
+            if (parent) parent.remove();
+            else el.remove();
+          }
+        }
+      });
+      
       // Remove Partner/Volunteer buttons
       $all('button').forEach(btn => {
         const t = (btn.textContent||'').trim().toLowerCase();
