@@ -295,37 +295,40 @@
       }
     `);
 
-    // Add email to contact section
-    function addContactEmail(root=document) {
-      $all('h4', root).forEach(h => {
-        const label = (h.textContent||'').trim();
-        if (label === 'Email Us') {
-          const card = h.closest('div');
-          if (card && !card.querySelector('.adpc-contact-email')) {
-            const emailDiv = make('p', { class: 'adpc-contact-email' }, [
-              make('a', { href: 'mailto:aldnse@gmail.com', text: 'aldnse@gmail.com' })
-            ]);
-            card.appendChild(emailDiv);
+    // Replace entire contact section with simple email text
+    function replaceContactSection(root=document) {
+      // Find and remove the entire "Get in Touch" section
+      $all('h2, h3').forEach(heading => {
+        const text = (heading.textContent||'').trim();
+        if (text === 'Get in Touch') {
+          // Find the parent container and remove it
+          let parent = heading.parentElement;
+          while (parent && !parent.querySelector('h2, h3, button')) {
+            parent = parent.parentElement;
+          }
+          if (parent) {
+            parent.remove();
+          } else {
+            heading.remove();
           }
         }
       });
     }
-    addContactEmail(document);
-
-    // UI sanitization that is resilient to SPA re-renders
-    function sanitizeUI(root=document){
-      // Remove email address texts broadly (contact card + footer) - but skip our added email
-      $all('span, p, a, li', root).forEach(el => { 
-        if (/@/.test(el.textContent||'') && !el.classList.contains('adpc-contact-email') && !el.closest('.adpc-contact-email')) el.remove(); 
-      });
-      // Contact card: remove p under "Email Us" - but skip our added email
-      $all('h4', root).forEach(h=>{
+    
+    // Remove old contact card and replace with simple email text
+    function replaceEmailSection(root=document) {
+      $all('h4').forEach(h => {
         const label = (h.textContent||'').trim();
         if (label === 'Email Us') {
           const card = h.closest('div');
-          if (card) { 
-            const emailP = card.querySelector('p:not(.adpc-contact-email)'); 
-            if (emailP && /@/.test(emailP.textContent||'')) emailP.remove(); 
+          if (card) {
+            // Replace the card with simple text
+            const newText = make('p', { style: 'font-size: 16px; color: #8B4513; font-weight: 500; margin: 20px 0;', text: 'Email Us at aldnse@gmail.com' });
+            const link = make('a', { href: 'mailto:aldnse@gmail.com', style: 'color: #8B4513; text-decoration: none;' });
+            link.textContent = 'aldnse@gmail.com';
+            newText.textContent = 'Email Us at ';
+            newText.appendChild(link);
+            card.replaceWith(newText);
           }
         }
         if (label === 'Follow Us') {
@@ -333,12 +336,22 @@
           if (col) col.remove();
         }
       });
+    }
+    
+    // UI sanitization that is resilient to SPA re-renders
+    function sanitizeUI(root=document){
       // Remove Partner/Volunteer buttons
-      $all('button', root).forEach(btn => {
+      $all('button').forEach(btn => {
         const t = (btn.textContent||'').trim().toLowerCase();
         if (t === 'partner with us' || t === 'volunteer') btn.remove();
       });
+      // Remove all other email addresses except our new one
+      $all('span, p, a, li').forEach(el => { 
+        if (/@/.test(el.textContent||'') && !el.textContent.includes('Email Us at')) el.remove(); 
+      });
     }
+    replaceContactSection(document);
+    replaceEmailSection(document);
     sanitizeUI(document);
 
     // Build modals once
