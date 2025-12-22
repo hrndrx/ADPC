@@ -319,6 +319,14 @@
       /* Remove blue dot and clean contact section */
       .text-adpc-secondary { display: none !important; }
       .bg-adpc-secondary { display: none !important; }
+      
+      /* Hide the three cards under Get in Touch using CSS */
+      div[class*="grid"]:has(> div:contains-text("Email Us")),
+      div[class*="grid"]:has(> div:contains-text("Join Our Community")) { display: none !important; }
+      /* Alternative CSS approach - hide by visible structure */
+      section:last-of-type > div[class*="grid"] > div:nth-child(1),
+      section:last-of-type > div[class*="grid"] > div:nth-child(2),
+      section:last-of-type > div[class*="grid"] > div:nth-child(3) { display: none !important; }
     `;
     document.head.appendChild(css);
     
@@ -330,42 +338,43 @@
       // Remove Partner/Volunteer buttons
       $all('button').forEach(btn => {
         const t = (btn.textContent||'').trim().toLowerCase();
-        if (t === 'partner with us' || t === 'volunteer' || t === 'partner') btn.remove();
+        if (t === 'partner with us' || t === 'volunteer' || t === 'partner') {
+          try { btn.remove(); } catch(e) {}
+        }
       });
       
-      // Remove Follow Us section
+      // Remove Follow Us section by hiding it with CSS
       $all('h4').forEach(h=>{
         if ((h.textContent||'').trim() === 'Follow Us') {
-          const col = h.closest('div');
-          if (col) col.remove();
+          try { 
+            const col = h.closest('[class*="col"], [class*="grid"], div');
+            if (col && col.parentElement) col.style.display = 'none';
+          } catch(e) {}
         }
       });
       
-      // Remove old email addresses (keep our new one)
-      $all('p, span, a, li').forEach(el => { 
-        const txt = el.textContent||'';
-        if (/@/.test(txt) && !txt.includes('aldnse@gmail.com')) el.remove(); 
-      });
-      
-      // Remove the three cards under Get in Touch
-      // 1. Email Us card
-      // 2. Blue dot card
-      // 3. Join Our Community card
-      $all('div, section').forEach(el => {
-        const txt = (el.textContent||'').trim().toLowerCase();
-        // Remove Email Us, Join Our Community cards and blue dot
-        if (txt.includes('email us') || txt.includes('join our community') || (el.className && el.className.includes('bg-adpc-secondary'))) {
-          // Check if this is a card container
-          if (el.className && (el.className.includes('rounded') || el.className.includes('shadow') || el.className.includes('bg-') || el.className.includes('p-'))) {
-            el.remove();
-          } else if (el.tagName === 'DIV' && el.parentElement) {
-            // Try to remove parent card container
-            const parent = el.closest('div[class*="rounded"], div[class*="shadow"], div[class*="bg-"]');
-            if (parent) parent.remove();
-            else el.remove();
+      // Hide the three cards (Email Us, Blue Dot, Join Our Community)
+      // Find the Get in Touch section and hide its grid children
+      const getInTouch = $all('*').find(el => (el.textContent||'').includes('Get in Touch'));
+      if (getInTouch) {
+        try {
+          // Find parent grid that contains the cards
+          const gridParent = getInTouch.closest('[class*="grid"]')?.parentElement;
+          if (gridParent) {
+            const grids = $all('[class*="grid"]', gridParent);
+            if (grids.length > 0) {
+              const lastGrid = grids[grids.length - 1];
+              if (lastGrid) {
+                // Hide the last 3 card children
+                const cards = $all(':scope > div', lastGrid);
+                cards.slice(-3).forEach(card => {
+                  try { card.style.display = 'none'; } catch(e) {}
+                });
+              }
+            }
           }
-        }
-      });
+        } catch(e) {}
+      }
     }
     
     sanitizeUI();
