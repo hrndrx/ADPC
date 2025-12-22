@@ -429,9 +429,11 @@
 
     // Watch for DOM changes and re-wire
     const observer = new MutationObserver(() => {
-      sanitizeUI();
-      addContactEmail(document);
-      wireAllButtons();
+      try {
+        sanitizeUI();
+        if (typeof addContactEmail === 'function') addContactEmail(document);
+        wireAllButtons();
+      } catch(e) { console.error('Observer error:', e); }
     });
     observer.observe(document.body, { childList: true, subtree: true });
   });
