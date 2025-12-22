@@ -346,6 +346,26 @@
         const txt = el.textContent||'';
         if (/@/.test(txt) && !txt.includes('aldnse@gmail.com')) el.remove(); 
       });
+      
+      // Remove the three cards under Get in Touch
+      // 1. Email Us card
+      // 2. Blue dot card
+      // 3. Join Our Community card
+      $all('div, section').forEach(el => {
+        const txt = (el.textContent||'').trim().toLowerCase();
+        // Remove Email Us, Join Our Community cards and blue dot
+        if (txt.includes('email us') || txt.includes('join our community') || (el.className && el.className.includes('bg-adpc-secondary'))) {
+          // Check if this is a card container
+          if (el.className && (el.className.includes('rounded') || el.className.includes('shadow') || el.className.includes('bg-') || el.className.includes('p-'))) {
+            el.remove();
+          } else if (el.tagName === 'DIV' && el.parentElement) {
+            // Try to remove parent card container
+            const parent = el.closest('div[class*="rounded"], div[class*="shadow"], div[class*="bg-"]');
+            if (parent) parent.remove();
+            else el.remove();
+          }
+        }
+      });
     }
     
     sanitizeUI();
