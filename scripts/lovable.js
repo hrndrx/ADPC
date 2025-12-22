@@ -325,25 +325,9 @@
     // Add email to contact section
     addContactEmail(document);
 
-    // Clean UI - remove unwanted elements (safe approach)
+    // Clean UI - minimal safe cleanup
     function sanitizeUI(){
-      try {
-        // Remove Partner/Volunteer buttons
-        $all('button').forEach(btn => {
-          const t = (btn.textContent||'').trim().toLowerCase();
-          if (t === 'partner with us' || t === 'volunteer' || t === 'partner') {
-            btn.remove();
-          }
-        });
-        
-        // Remove Follow Us section
-        $all('h4').forEach(h=>{
-          if ((h.textContent||'').trim() === 'Follow Us') {
-            const col = h.closest('div');
-            if (col) col.remove();
-          }
-        });
-      } catch(e) { console.error('UI cleanup error:', e); }
+      // Core cleanup only
     }
     
     sanitizeUI();
