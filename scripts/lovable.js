@@ -248,6 +248,39 @@
   function show(el){ el.style.display = 'flex'; el.setAttribute('aria-hidden','false'); }
   function hide(el){ el.style.display = 'none'; el.setAttribute('aria-hidden','true'); }
 
+  // Add email to contact section
+  function addContactEmail(root=document){
+    // Find "Get in Touch" heading
+    const getInTouchHeading = $all('h2, h3, h4', root).find(h => (h.textContent||'').trim().toLowerCase().includes('get in touch'));
+    if (!getInTouchHeading) return;
+    
+    // Check if email already exists
+    if (getInTouchHeading.parentElement?.textContent?.includes('aldnse@gmail.com')) return;
+    
+    // Find the parent container
+    let container = getInTouchHeading.parentElement;
+    while (container && !container.innerHTML.includes('Get in Touch')) {
+      container = container.parentElement;
+    }
+    if (!container) container = getInTouchHeading.parentElement;
+    
+    // Check if we already added the email
+    if (container.querySelector('[data-adpc-email]')) return;
+    
+    // Create and inject email element
+    const emailDiv = make('div', { 'data-adpc-email': 'true', style: 'margin-top: 16px; font-size: 16px; color: #5D4037; font-weight: 600;' });
+    const emailLink = make('a', { href: 'mailto:aldnse@gmail.com', style: 'color: #5D4037; text-decoration: none; border-bottom: 2px solid #5D4037; padding-bottom: 2px;', text: 'aldnse@gmail.com' });
+    emailDiv.appendChild(document.createTextNode('Email Us: '));
+    emailDiv.appendChild(emailLink);
+    
+    // Insert after heading or in container
+    if (getInTouchHeading.nextElementSibling) {
+      getInTouchHeading.nextElementSibling.before(emailDiv);
+    } else {
+      container.appendChild(emailDiv);
+    }
+  }
+
   ready(()=>{
     // Rewrite asset URLs
     rewriteSrcAttributes(document);
@@ -288,6 +321,9 @@
       .bg-adpc-secondary { display: none !important; }
     `;
     document.head.appendChild(css);
+    
+    // Add email to contact section
+    addContactEmail(document);
 
     // Clean UI - remove unwanted elements
     function sanitizeUI(){
@@ -374,6 +410,7 @@
     // Watch for DOM changes and re-wire
     const observer = new MutationObserver(() => {
       sanitizeUI();
+      addContactEmail(document);
       wireAllButtons();
     });
     observer.observe(document.body, { childList: true, subtree: true });
