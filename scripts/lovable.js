@@ -319,62 +319,31 @@
       /* Remove blue dot and clean contact section */
       .text-adpc-secondary { display: none !important; }
       .bg-adpc-secondary { display: none !important; }
-      
-      /* Hide the three cards under Get in Touch using CSS */
-      div[class*="grid"]:has(> div:contains-text("Email Us")),
-      div[class*="grid"]:has(> div:contains-text("Join Our Community")) { display: none !important; }
-      /* Alternative CSS approach - hide by visible structure */
-      section:last-of-type > div[class*="grid"] > div:nth-child(1),
-      section:last-of-type > div[class*="grid"] > div:nth-child(2),
-      section:last-of-type > div[class*="grid"] > div:nth-child(3) { display: none !important; }
     `;
     document.head.appendChild(css);
     
     // Add email to contact section
     addContactEmail(document);
 
-    // Clean UI - remove unwanted elements
+    // Clean UI - remove unwanted elements (safe approach)
     function sanitizeUI(){
-      // Remove Partner/Volunteer buttons
-      $all('button').forEach(btn => {
-        const t = (btn.textContent||'').trim().toLowerCase();
-        if (t === 'partner with us' || t === 'volunteer' || t === 'partner') {
-          try { btn.remove(); } catch(e) {}
-        }
-      });
-      
-      // Remove Follow Us section by hiding it with CSS
-      $all('h4').forEach(h=>{
-        if ((h.textContent||'').trim() === 'Follow Us') {
-          try { 
-            const col = h.closest('[class*="col"], [class*="grid"], div');
-            if (col && col.parentElement) col.style.display = 'none';
-          } catch(e) {}
-        }
-      });
-      
-      // Hide the three cards (Email Us, Blue Dot, Join Our Community)
-      // Find the Get in Touch section and hide its grid children
-      const getInTouch = $all('*').find(el => (el.textContent||'').includes('Get in Touch'));
-      if (getInTouch) {
-        try {
-          // Find parent grid that contains the cards
-          const gridParent = getInTouch.closest('[class*="grid"]')?.parentElement;
-          if (gridParent) {
-            const grids = $all('[class*="grid"]', gridParent);
-            if (grids.length > 0) {
-              const lastGrid = grids[grids.length - 1];
-              if (lastGrid) {
-                // Hide the last 3 card children
-                const cards = $all(':scope > div', lastGrid);
-                cards.slice(-3).forEach(card => {
-                  try { card.style.display = 'none'; } catch(e) {}
-                });
-              }
-            }
+      try {
+        // Remove Partner/Volunteer buttons
+        $all('button').forEach(btn => {
+          const t = (btn.textContent||'').trim().toLowerCase();
+          if (t === 'partner with us' || t === 'volunteer' || t === 'partner') {
+            btn.remove();
           }
-        } catch(e) {}
-      }
+        });
+        
+        // Remove Follow Us section
+        $all('h4').forEach(h=>{
+          if ((h.textContent||'').trim() === 'Follow Us') {
+            const col = h.closest('div');
+            if (col) col.remove();
+          }
+        });
+      } catch(e) { console.error('UI cleanup error:', e); }
     }
     
     sanitizeUI();
