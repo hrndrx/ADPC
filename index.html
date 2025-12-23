@@ -87,90 +87,37 @@ body[unresolved] {opacity: 0; display: block; overflow: hidden; position: relati
 
         <button id="lovable-badge-close" style="position: absolute; top: -2px; right: 5px; cursor: pointer; font-size: 14px; color: #A1A1AA;">×</button>
 </a>
-<script>
-        // Don't show the lovable-badge if the page is in an iframe or if it's being rendered by puppeteer (screenshot service)
-        if (window.self !== window.top || navigator.userAgent.includes('puppeteer')) {
-                // the page is in an iframe
-                var badge = document.getElementById('lovable-badge');
-                if (badge) {
-                        badge.style.display = 'none';
-                }
-        }
 
-        // Add click event listener to close button
-        var closeButton = document.getElementById('lovable-badge-close');
-        if (closeButton) {
-                closeButton.addEventListener('click', function(event) {
-                        event.preventDefault();
-                        event.stopPropagation();
-                        var badge = document.getElementById('lovable-badge');
-                        if (badge) {
-                                badge.style.display = 'none';
-                        }
-                });
-        }
-</script>
 <script src="./scripts/lovable.js"></script>
 
 <script>
-function hideButtonsByText() {
-  // Find and hide all elements containing these exact texts
-  const textsToHide = ['Follow Us', 'Join Our Community', 'Become a Member', 'Volunteer', 'Partner With Us'];
+window.addEventListener('load', function() {
+  // Aggressive CSS-based hiding
+  const style = document.createElement('style');
+  style.textContent = `
+    button:contains("Follow"), button:contains("Join"), button:contains("Become"), button:contains("Volunteer"), button:contains("Partner") { display: none !important; }
+    *:has(> *:contains("Follow Us")) { display: none !important; }
+  `;
+  document.head.appendChild(style);
   
-  // Get all text nodes and elements
-  const walker = document.createTreeWalker(
-    document.documentElement,
-    NodeFilter.SHOW_ELEMENT,
-    null
-  );
-
-  let node;
-  const toHide = new Set();
-  
-  while (node = walker.nextNode()) {
-    const text = node.textContent.trim();
-    const tag = node.tagName.toLowerCase();
-    
-    // Check if this element's direct text matches
-    if ((tag === 'button' || tag === 'a' || (node.className && (node.className.includes('button') || node.className.includes('btn')))) && textsToHide.includes(text)) {
-      toHide.add(node);
+  // DOM-based hiding
+  const allElements = document.querySelectorAll('*');
+  allElements.forEach(el => {
+    const text = el.textContent.trim();
+    if ((text === 'Follow Us' || text === 'Join Our Community' || text === 'Become a Member' || text === 'Volunteer' || text === 'Partner With Us')) {
+      el.style.display = 'none';
+      el.style.visibility = 'hidden';
+      el.style.position = 'absolute';
+      el.style.pointerEvents = 'none';
     }
-    
-    // Check children of buttons
-    if (tag === 'button' || (tag === 'a' && node.className && node.className.includes('button'))) {
-      for (let txt of textsToHide) {
-        if (node.textContent.includes(txt)) {
-          toHide.add(node);
-        }
-      }
-    }
-    
-    // Hide sections with "Follow Us" heading
-    if ((tag === 'h' || tag === 'h2' || tag === 'h3') && text.includes('Follow')) {
-      let parent = node.parentElement;
-      while (parent && parent.tagName !== 'SECTION') parent = parent.parentElement;
-      if (parent && parent.tagName === 'SECTION') toHide.add(parent);
-    }
-  }
-  
-  // Hide all collected elements
-  toHide.forEach(el => {
-    el.style.display = 'none';
-    el.style.visibility = 'hidden';
   });
-}
-
-// Run multiple times to catch dynamically loaded content
-document.addEventListener('DOMContentLoaded', hideButtonsByText);
-setTimeout(hideButtonsByText, 100);
-setTimeout(hideButtonsByText, 500);
-setTimeout(hideButtonsByText, 1000);
-
-// Watch for DOM changes
-new MutationObserver(hideButtonsByText).observe(document.body, { 
-  childList: true, 
-  subtree: true,
-  attributes: true
+  
+  // Also hide parent containers
+  allElements.forEach(el => {
+    if (el.children.length === 1 && el.children[0].style.display === 'none') {
+      el.style.display = 'none';
+    }
+  });
 });
 </script>
 </body></html>
