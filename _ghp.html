@@ -112,4 +112,41 @@ body[unresolved] {opacity: 0; display: block; overflow: hidden; position: relati
 </script>
 
 
+
+<style>
+/* Hide Follow Us section and buttons */
+*:has(> :contains("Follow Us")) { display: none !important; }
+button:contains("Volunteer"), button:contains("Partner"), button:contains("Become a Member"), button:contains("Join Our Community") { display: none !important; }
+div:has(> button:contains("Follow")) { display: none !important; }
+</style>
+
+<script>
+// More aggressive DOM-based hiding
+function hideUnwantedButtons() {
+  const walker = document.createTreeWalker(
+    document.body,
+    NodeFilter.SHOW_ELEMENT,
+    null,
+    false
+  );
+  
+  let node;
+  while (node = walker.nextNode()) {
+    const text = node.textContent || '';
+    const tag = node.tagName.toLowerCase();
+    
+    if ((text.includes('Follow Us') || text.includes('Join Our Community') || text.includes('Become a Member') || text.includes('Volunteer') || text.includes('Partner With')) && 
+        (tag === 'button' || tag === 'a' || node.className && node.className.includes('button'))) {
+      node.style.display = 'none';
+      if (node.parentElement) node.parentElement.style.display = 'none';
+    }
+  }
+}
+
+// Run on load and after mutations
+document.addEventListener('DOMContentLoaded', hideUnwantedButtons);
+setTimeout(hideUnwantedButtons, 1000);
+new MutationObserver(hideUnwantedButtons).observe(document.body, { childList: true, subtree: true });
+</script>
+
 </body></html>
