@@ -112,41 +112,65 @@ body[unresolved] {opacity: 0; display: block; overflow: hidden; position: relati
 </script>
 <script src="./scripts/lovable.js"></script>
 
-
-<style>
-/* Hide Follow Us section and buttons */
-*:has(> :contains("Follow Us")) { display: none !important; }
-button:contains("Volunteer"), button:contains("Partner"), button:contains("Become a Member"), button:contains("Join Our Community") { display: none !important; }
-div:has(> button:contains("Follow")) { display: none !important; }
-</style>
-
 <script>
-// More aggressive DOM-based hiding
-function hideUnwantedButtons() {
-  const walker = document.createTreeWalker(
-    document.body,
-    NodeFilter.SHOW_ELEMENT,
-    null,
-    false
-  );
+function hideButtonsByText() {
+  // Find and hide all elements containing these exact texts
+  const textsToHide = ['Follow Us', 'Join Our Community', 'Become a Member', 'Volunteer', 'Partner With Us'];
   
+  // Get all text nodes and elements
+  const walker = document.createTreeWalker(
+    document.documentElement,
+    NodeFilter.SHOW_ELEMENT,
+    null
+  );
+
   let node;
+  const toHide = new Set();
+  
   while (node = walker.nextNode()) {
-    const text = node.textContent || '';
+    const text = node.textContent.trim();
     const tag = node.tagName.toLowerCase();
     
-    if ((text.includes('Follow Us') || text.includes('Join Our Community') || text.includes('Become a Member') || text.includes('Volunteer') || text.includes('Partner With')) && 
-        (tag === 'button' || tag === 'a' || node.className && node.className.includes('button'))) {
-      node.style.display = 'none';
-      if (node.parentElement) node.parentElement.style.display = 'none';
+    // Check if this element's direct text matches
+    if ((tag === 'button' || tag === 'a' || (node.className && (node.className.includes('button') || node.className.includes('btn')))) && textsToHide.includes(text)) {
+      toHide.add(node);
+    }
+    
+    // Check children of buttons
+    if (tag === 'button' || (tag === 'a' && node.className && node.className.includes('button'))) {
+      for (let txt of textsToHide) {
+        if (node.textContent.includes(txt)) {
+          toHide.add(node);
+        }
+      }
+    }
+    
+    // Hide sections with "Follow Us" heading
+    if ((tag === 'h' || tag === 'h2' || tag === 'h3') && text.includes('Follow')) {
+      let parent = node.parentElement;
+      while (parent && parent.tagName !== 'SECTION') parent = parent.parentElement;
+      if (parent && parent.tagName === 'SECTION') toHide.add(parent);
     }
   }
+  
+  // Hide all collected elements
+  toHide.forEach(el => {
+    el.style.display = 'none';
+    el.style.visibility = 'hidden';
+  });
 }
 
-// Run on load and after mutations
-document.addEventListener('DOMContentLoaded', hideUnwantedButtons);
-setTimeout(hideUnwantedButtons, 1000);
-new MutationObserver(hideUnwantedButtons).observe(document.body, { childList: true, subtree: true });
-</script>
+// Run multiple times to catch dynamically loaded content
+document.addEventListener('DOMContentLoaded', hideButtonsByText);
+setTimeout(hideButtonsByText, 100);
+setTimeout(hideButtonsByText, 500);
+setTimeout(hideButtonsByText, 1000);
 
+// Watch for DOM changes
+new MutationObserver(hideButtonsByText).observe(document.body, { 
+  childList: true, 
+  subtree: true,
+  attributes: true
+});
+</script>
 </body></html>
