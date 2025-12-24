@@ -24,60 +24,6 @@ body[unresolved] {opacity: 0; display: block; overflow: hidden; position: relati
     <link rel="stylesheet" crossorigin="" href="./index-CWBgO5mG.css">
   
 
-
-<script>
-// Hide email address completely
-document.addEventListener('DOMContentLoaded', function() {
-  // Find all elements containing the email and hide the text
-  const elements = document.querySelectorAll('*');
-  elements.forEach(el => {
-    // Check if element text contains the email
-    if (el.textContent && el.textContent.includes('aldnse@gmail.com')) {
-      el.style.fontSize = '0';
-      el.style.visibility = 'hidden';
-      el.style.display = 'none';
-    }
-    
-    // Check all attributes
-    for (let attr of el.attributes || []) {
-      if (attr.value && attr.value.includes('aldnse@gmail.com')) {
-        el.setAttribute(attr.name, attr.value.replace(/aldnse@gmail\.com/g, '[email protected]'));
-      }
-    }
-  });
-  
-  // Find and replace any visible email text with "Email Us" text node
-  const walker = document.createTreeWalker(
-    document.body,
-    NodeFilter.SHOW_TEXT,
-    null
-  );
-  
-  let node;
-  const nodesToReplace = [];
-  while (node = walker.nextNode()) {
-    if (node.textContent.includes('aldnse@gmail.com')) {
-      nodesToReplace.push(node);
-    }
-  }
-  
-  nodesToReplace.forEach(node => {
-    const parent = node.parentElement;
-    if (parent) {
-      const newLink = document.createElement('a');
-      newLink.href = '#';
-      newLink.textContent = 'Email Us';
-      newLink.style.cursor = 'pointer';
-      parent.replaceChild(newLink, node);
-    }
-  });
-});
-</script>
-
-<style>
-/* Hide any remaining email text */
-*:contains("aldnse@gmail.com") { display: none !important; font-size: 0 !important; }
-</style>
 </head>
 
   <body>
